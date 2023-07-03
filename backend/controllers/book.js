@@ -15,7 +15,6 @@ exports.getAllBook = (req, res, next) => {
 
 
 exports.creatBook = (req, res, next) => {
-  console.log("Requête reçue :", req.body);
   delete req.body._id;
   const book = new Book({
   ...req.body
@@ -75,3 +74,4 @@ exports.deleteBook = (req, res, next) => {
       });
     });
 };
+
