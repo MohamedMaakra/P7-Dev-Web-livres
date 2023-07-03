@@ -1,4 +1,5 @@
 const Book = require('../models/book')
+const mongoose = require('mongoose');
 
 
 exports.getAllBook = (req, res, next) => {
@@ -49,7 +50,7 @@ exports.getOneBook= (req, res, next) => {
   );
 };
 
-const mongoose = require('mongoose');
+
 
 // ...
 

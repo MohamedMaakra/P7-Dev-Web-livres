@@ -23,7 +23,8 @@ app.use(express.json());
 
 
 
-app.use('/api/auth',userRtoutes)
 app.use('/api/books',userBook)
+app.use('/api/auth',userRtoutes)
+
 
 module.exports = app;
