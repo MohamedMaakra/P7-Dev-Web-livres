@@ -80,9 +80,9 @@ exports.modifyBook = (req, res, next) => {
   }
 
   
-  console.log('req.protocol:', req.protocol);
-  console.log('req.get(\'host\'):', req.get('host'));
-  console.log('newData.imageUrl:', newData.imageUrl);
+  //console.log('req.protocol:', req.protocol);
+  //console.log('req.get(\'host\'):', req.get('host'));
+ // console.log('newData.imageUrl:', newData.imageUrl);
 
 
   Book.findById(req.params.id)
@@ -99,6 +99,7 @@ exports.modifyBook = (req, res, next) => {
             console.error(err);
           }
         });
+        
       }
       //console.log(bookObject);
 
@@ -114,6 +115,9 @@ exports.modifyBook = (req, res, next) => {
       res.status(500).json({ error });
     });
 };
+
+
+
 
 
 
