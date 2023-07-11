@@ -72,49 +72,57 @@ exports.deleteBook = (req, res, next) => {
       });
 };
 
+exports.modifyBook = async (req, res, next) => {
+  try {
+    const bookObject = req.file
+      ? {
+          ...JSON.parse(req.body.book),
+          imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
+        }
+      : { ...req.body };
 
-exports.modifyBook = (req, res, next) => {
-  const newData = req.body;
-  if (req.file) {
-    newData.imageUrl = `${req.protocol}://${req.get('host')}/images/${req.file.filename}`;
+    const book = await Book.findOne({ _id: req.params.id });
+    if (!book) {
+      return res.status(404).json({ error: 'Livre non trouvé' });
+    }
+    if (book.userId !== req.auth.userId) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+
+    if (req.file) {
+      const imageName = path.basename(book.imageUrl);
+      const imagePath = path.join(__dirname, '..', 'images', imageName);
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error(err);
+        }
+      });
+    }
+
+    await Book.updateOne({ _id: req.params.id }, { ...bookObject });
+
+    res.status(200).json({ message: 'Livre modifié' });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
-
-  
-  //console.log('req.protocol:', req.protocol);
-  //console.log('req.get(\'host\'):', req.get('host'));
- // console.log('newData.imageUrl:', newData.imageUrl);
-
-
-  Book.findById(req.params.id)
-    .then(bookObject => {
-      if (!bookObject) {
-        return res.status(404).json({ message: 'Livre non trouvé' });
-      }
-
-      if (req.file) {
-        const imageName = path.basename(bookObject.imageUrl);
-        const imagePath = path.join(__dirname, '..', 'images', imageName);
-        fs.unlink(imagePath, (err) => {
-          if (err) {
-            console.error(err);
-          }
-        });
-        
-      }
-      //console.log(bookObject);
-
-      Book.updateOne({ _id: req.params.id }, newData)
-        .then(() => {
-          res.status(200).json({ message: 'Livre modifié' });
-        })
-        .catch(error => {
-          res.status(400).json({ error });
-        });
-    })
-    .catch(error => {
-      res.status(500).json({ error });
-    });
 };
+
+
+
+exports.bestRating = async (req, res) => {
+  try {
+    const books = await Book.find()
+      .sort({ averageRating: -1 })
+      .limit(3);
+
+    console.log("Books:", books);
+
+    res.status(200).json(books);
+  } catch (error) {
+    res.status(400).json({ error });
+  }
+};
+
 
 
 
