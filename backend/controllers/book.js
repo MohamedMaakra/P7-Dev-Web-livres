@@ -2,6 +2,8 @@ const book = require('../models/book');
 const Book = require('../models/book')
 const fs= require('fs')
 const path = require('path')
+const mongoose = require('mongoose');
+
 
 
 exports.getAllBook = (req, res, next) => {
@@ -35,21 +37,28 @@ exports.creatBook = (req, res, next) => {
 };
 
 
-exports.getOneBook= (req, res, next) => {
-  Book.findOne({
-    _id: req.params.id
-  }).then(
-    (Book) => {
-      res.status(200).json(Book);
+exports.getOneBook = async (req, res, next) => {
+  try {
+    const bookId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(bookId)) {
+      return res.status(400).json({ error: 'ID de livre invalide' });
     }
-  ).catch(
-    (error) => {
-      res.status(404).json({
-        error: error
-      });
+
+    const book = await Book.findById(bookId);
+
+    if (!book) {
+      return res.status(404).json({ error: 'Livre non trouvé' });
     }
-  );
+
+    res.status(200).json(book);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
+
+
+
 
 
 ;
@@ -122,12 +131,3 @@ exports.bestRating = async (req, res) => {
     res.status(400).json({ error });
   }
 };
-
-
-
-
-
-
-
-
-
