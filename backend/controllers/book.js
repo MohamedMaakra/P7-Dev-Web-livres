@@ -124,10 +124,50 @@ exports.bestRating = async (req, res) => {
       .sort({ averageRating: -1 })
       .limit(3);
 
-    console.log("Books:", books);
+    //console.log("Books:", books);
 
     res.status(200).json(books);
   } catch (error) {
     res.status(400).json({ error });
   }
 };
+
+exports.ratingBook = async (req, res) => {
+  try {
+    const book = await Book.findOne({ _id: req.params.id });
+    const found = book.ratings.find((r) => r.userId === req.auth.userId);
+
+    //console.log(req.auth.userId);
+
+    if (found) {
+      return res.status(401).json({
+        message: "Vous ne pouvez pas modifier la note déjà saisie",
+      });
+    }
+
+    book.ratings.push({
+      userId: req.auth.userId,
+      grade: req.body.rating,
+    });
+
+    let total = 0;
+    book.ratings.forEach((element) => {
+      total += element.grade;
+    });
+
+    const average = total / book.ratings.length;
+    book.averageRating = average; // Mettre à jour la moyenne des notes du livre
+
+    await book.save();
+
+    res.status(200).json({
+      message: "Note ajoutée avec succès",
+      averageRating: average,
+      id: book._id, 
+    });
+    
+  } catch (error) {
+    res.status(400).json({ error });
+  }
+};
+
