@@ -156,18 +156,14 @@ exports.ratingBook = async (req, res) => {
     });
 
     const average = total / book.ratings.length;
-    book.averageRating = average; // Mettre à jour la moyenne des notes du livre
+    book.averageRating = average;
 
-    await book.save();
+    await Book.updateOne({ _id: req.params.id }, { averageRating: average });
 
-    res.status(200).json({
-      message: "Note ajoutée avec succès",
-      averageRating: average,
-      id: book._id, 
-    });
-    
+    res.status(200).json(book);
   } catch (error) {
     res.status(400).json({ error });
   }
 };
+
 
