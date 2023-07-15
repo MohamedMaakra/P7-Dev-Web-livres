@@ -25,11 +25,20 @@ exports.creatBook = (req, res, next) => {
   delete bookObject._id;
   delete bookObject._userId;
 
+  const averageRating = bookObject.averageRating;
+  if (averageRating > 5) {
+    bookObject.averageRating = 0;
+  }
+
+  bookObject.ratings = []   
+
   const book = new Book({
       ...bookObject,
       userId: req.auth.userId,
       imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
   });
+
+//console.log(book) 
 
   book.save()
   .then(() => { res.status(201).json({message: 'Livre enregistré'})})
@@ -56,8 +65,6 @@ exports.getOneBook = async (req, res, next) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-
 
 
 
@@ -137,8 +144,12 @@ exports.ratingBook = async (req, res) => {
     const book = await Book.findOne({ _id: req.params.id });
     const found = book.ratings.find((r) => r.userId === req.auth.userId);
 
-    //console.log(req.auth.userId);
-
+    if (book.userId === req.auth.userId) {
+      return res.status(401).json({
+        message: "Vous ne pouvez pas voter pour votre propre livre",
+      });
+    }
+ 
     if (found) {
       return res.status(401).json({
         message: "Vous ne pouvez pas modifier la note déjà saisie",
