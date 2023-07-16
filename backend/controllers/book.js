@@ -38,7 +38,7 @@ exports.creatBook = (req, res, next) => {
       imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
   });
 
-//console.log(book) 
+console.log(book) 
 
   book.save()
   .then(() => { res.status(201).json({message: 'Livre enregistré'})})
@@ -140,24 +140,24 @@ exports.bestRating = async (req, res) => {
 };
 
 exports.ratingBook = async (req, res) => {
+  if (!req.auth.userId) {
+    return res.status(401).json({ message: 'Not authorized' });
+  }
+
   try {
     const book = await Book.findOne({ _id: req.params.id });
-    const found = book.ratings.find((r) => r.userId === req.auth.userId);
+    const voterId = req.auth.userId;
 
-    if (book.userId === req.auth.userId) {
-      return res.status(401).json({
-        message: "Vous ne pouvez pas voter pour votre propre livre",
-      });
-    }
- 
+    const found = book.ratings.find((r) => r.userId === voterId);
+
     if (found) {
       return res.status(401).json({
-        message: "Vous ne pouvez pas modifier la note déjà saisie",
+        message: "Vous ne pouvez pas modifier la note déjà saisie.",
       });
     }
 
     book.ratings.push({
-      userId: req.auth.userId,
+      userId: voterId,
       grade: req.body.rating,
     });
 
@@ -166,15 +166,19 @@ exports.ratingBook = async (req, res) => {
       total += element.grade;
     });
 
-    const average = total / book.ratings.length;
-    book.averageRating = average;
+    const average = (total / book.ratings.length).toFixed(0);
+    book.averageRating = parseFloat(average);
 
-    await Book.updateOne({ _id: req.params.id }, { averageRating: average });
+    console.log('Average:', average); // Afficher la moyenne dans la console
+
+    await book.save(); // Sauvegarder les modifications dans la base de données
 
     res.status(200).json(book);
   } catch (error) {
     res.status(400).json({ error });
   }
 };
+
+
 
 
