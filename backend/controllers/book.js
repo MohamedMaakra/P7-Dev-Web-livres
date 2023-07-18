@@ -1,4 +1,3 @@
-const book = require('../models/book');
 const Book = require('../models/book')
 const fs= require('fs')
 const path = require('path')
@@ -6,47 +5,41 @@ const mongoose = require('mongoose');
 
 
 
-exports.getAllBook = (req, res, next) => {
-    Book.find().then(
-        (Book) => {
-            res.status(200).json(Book);
-        }
-    ).catch(
-        (error) => {
-          res.status(400).json({ error });
-        }
-      );
+exports.getAllBook = async (req, res) => {
+  try {
+    const books = await Book.find();
+    res.status(200).json(books);
+  } catch (error) {
+    res.status(400).json({ error });
+  }
 };
 
 
 
-exports.creatBook = (req, res, next) => {
-  const bookObject = JSON.parse(req.body.book);
-  delete bookObject._id;
-  delete bookObject._userId;
-
-  const averageRating = bookObject.averageRating;
-  if (averageRating > 5) {
+exports.createBook = async (req, res) => {
+  try {
+    const bookObject = JSON.parse(req.body.book);
     bookObject.averageRating = 0;
-  }
+    bookObject.ratings = [];
 
-  bookObject.ratings = []   
-
-  const book = new Book({
+    const book = new Book({
       ...bookObject,
       userId: req.auth.userId,
       imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
-  });
+    });
 
-console.log(book) 
+    console.log(book);
 
-  book.save()
-  .then(() => { res.status(201).json({message: 'Livre enregistré'})})
-  .catch(error => { res.status(400).json( { error })})
+    await book.save();
+    res.status(201).json({ message: 'Livre enregistré' });
+  } catch (error) {
+    res.status(400).json({ error });
+  }
 };
 
 
-exports.getOneBook = async (req, res, next) => {
+
+exports.getOneBook = async (req, res) => {
   try {
     const bookId = req.params.id;
 
@@ -69,26 +62,26 @@ exports.getOneBook = async (req, res, next) => {
 
 
 ;
-exports.deleteBook = (req, res, next) => {
-  Book.findOne({ _id: req.params.id})
-      .then(book => {
-          if (book.userId != req.auth.userId) {
-              res.status(401).json({message: 'Not authorized'});
-          } else {
-              const filename = book.imageUrl.split('/images/')[1];
-              fs.unlink(`images/${filename}`, () => {
-                  Book.deleteOne({_id: req.params.id})
-                      .then(() => { res.status(200).json({message: 'Objet supprimé !'})})
-                      .catch(error => res.status(401).json({ error }));
-              });
-          }
-      })
-      .catch( error => {
-          res.status(500).json({ error });
-      });
+exports.deleteBook = async (req, res) => {
+  try {
+    const book = await Book.findOne({ _id: req.params.id });
+
+    if (book.userId != req.auth.userId) {
+      return res.status(401).json({ message: 'Non autorisé' });
+    }
+
+    const filename = book.imageUrl.split('/images/')[1];
+    await fs.unlink(`images/${filename}`);
+
+    await Book.deleteOne({ _id: req.params.id });
+
+    res.status(200).json({ message: 'Objet supprimé !' });
+  } catch (error) {
+    res.status(500).json({ error });
+  }
 };
 
-exports.modifyBook = async (req, res, next) => {
+exports.modifyBook = async (req, res) => {
   try {
     const bookObject = req.file
       ? {
@@ -96,6 +89,12 @@ exports.modifyBook = async (req, res, next) => {
           imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
         }
       : { ...req.body };
+
+    // Vérifier si la note est entre 1 et 5
+    const  note  = bookObject;
+    if (note && (note < 1 || note > 5)) {
+      return res.status(400).json({ error: 'La note doit être comprise entre 1 et 5' });
+    }
 
     const book = await Book.findOne({ _id: req.params.id });
     if (!book) {
@@ -125,6 +124,7 @@ exports.modifyBook = async (req, res, next) => {
 
 
 
+
 exports.bestRating = async (req, res) => {
   try {
     const books = await Book.find()
@@ -141,12 +141,20 @@ exports.bestRating = async (req, res) => {
 
 exports.ratingBook = async (req, res) => {
   if (!req.auth.userId) {
-    return res.status(401).json({ message: 'Not authorized' });
+    return res.status(401).json({ message: 'Non autorisé' });
   }
 
   try {
     const book = await Book.findOne({ _id: req.params.id });
     const voterId = req.auth.userId;
+
+    const propio =  book.userId;
+
+    if (book.ratings.length === 0 && voterId === propio) {
+      return res.status(401).json({
+        message: "Vous ne pouvez pas voter pour votre propre livre.",
+      });
+    }
 
     const found = book.ratings.find((r) => r.userId === voterId);
 
@@ -166,19 +174,18 @@ exports.ratingBook = async (req, res) => {
       total += element.grade;
     });
 
-    const average = (total / book.ratings.length).toFixed(0);
+    const average = (total / book.ratings.length).toFixed(1);
     book.averageRating = parseFloat(average);
 
-    console.log('Average:', average); // Afficher la moyenne dans la console
+    console.log('Moyenne:', average); // Afficher la moyenne dans la console
 
     await book.save(); // Sauvegarder les modifications dans la base de données
 
     res.status(200).json(book);
   } catch (error) {
-    res.status(400).json({ error });
+    res.status(400).json({ error: error.message });
   }
 };
-
 
 
 
