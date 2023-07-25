@@ -66,18 +66,36 @@ exports.deleteBook = async (req, res) => {
   try {
     const book = await Book.findOne({ _id: req.params.id });
 
+    if (!book) {
+      return res.status(404).json({ message: 'Livre non trouvé' });
+    }
+
     if (book.userId != req.auth.userId) {
       return res.status(401).json({ message: 'Non autorisé' });
     }
 
-    const filename = book.imageUrl.split('/images/')[1];
-    await fs.unlink(`images/${filename}`);
+    if (book.imageUrl) {
+      const imageName = path.basename(book.imageUrl);
+      const imagePath = path.join(__dirname, '..', 'images', imageName);
+
+      // Utiliser fs.access pour vérifier l'existence de l'image
+      fs.access(imagePath, fs.constants.F_OK, (err) => {
+        if (!err) {
+         
+          fs.unlink(imagePath, (err) => {
+            if (err) {
+              console.error(err);
+            }
+          });
+        }
+      });
+    }
 
     await Book.deleteOne({ _id: req.params.id });
 
-    res.status(200).json({ message: 'Objet supprimé !' });
+    res.status(200).json({ message: 'Livre supprimé !' });
   } catch (error) {
-    res.status(500).json({ error });
+    res.status(500).json({ error: error.message });
   }
 };
 
